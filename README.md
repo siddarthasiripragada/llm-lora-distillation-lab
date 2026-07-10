@@ -84,6 +84,22 @@ pytest -v
 python scripts/07_run_cpu_smoke_test.py
 ```
 
+The smoke test is the first local proof of real LoRA backpropagation. It writes `results/trainable_parameters.json` and `results/gradient_verification.json`. The important fields are `trainable_parameters > 0`, `trainable_percentage` well below full fine-tuning, `lora_gradient_nonzero: true`, `unexpected_base_trainable_parameters: 0`, and `frozen_base_gradients: 0`.
+
+## Teacher Data
+
+Start Ollama and pull the practical CPU teacher first:
+
+```powershell
+ollama pull qwen2.5:3b
+Invoke-RestMethod -Uri http://localhost:11434/api/tags
+python scripts/03_generate_teacher_outputs.py
+python scripts/04_validate_distilled_data.py
+python scripts/05_freeze_benchmark.py
+```
+
+`03_generate_teacher_outputs.py` never uses held-out benchmark prompts. `04_validate_distilled_data.py` writes accepted rows to `data/distilled_accepted.jsonl` and rejected rows to `data/rejected_examples.jsonl`. Do not train blindly on raw teacher responses.
+
 ## Colab Full Training
 
 Open `notebooks/train_lora_colab.ipynb` and run cells top to bottom:
@@ -103,9 +119,25 @@ Open `notebooks/train_lora_colab.ipynb` and run cells top to bottom:
 
 All systems must run against the exact same `benchmarks/heldout.jsonl` file. Raw outputs, parse failures, latency, and metric records are stored in `results/`. Do not edit expected outputs after seeing predictions.
 
+Run the base benchmark before training:
+
+```powershell
+python scripts/06_run_base_benchmark.py
+```
+
+After the Colab adapter is copied into `adapters/sidsearch-lora`, run:
+
+```powershell
+python scripts/09_run_lora_benchmark.py
+python scripts/10_compare_results.py
+python scripts/11_generate_report.py
+```
+
 ## Actual Results
 
 No real base-vs-LoRA benchmark results are committed yet. The deterministic rule-engine benchmark is only a pipeline validation baseline and must not be reported as model performance.
+
+Do not publish training-set performance as evidence of improvement. A valid public claim must come from the 50 held-out SidSearch examples.
 
 ## Failure Analysis
 
@@ -131,4 +163,3 @@ python scripts/11_generate_report.py
 ## Repository Structure
 
 The repository contains configs, source package, protocol/data scripts, benchmark tools, tests, docs, article drafts, Colab notebook, adapter output folder, and result output folder matching the requested lab structure.
-

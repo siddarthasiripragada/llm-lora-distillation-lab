@@ -13,6 +13,15 @@ from sidsearch_lora_lab.schemas import parse_json_object, validate_sidsearch_out
 Generator = Callable[[str], str]
 
 
+SYSTEM_PROMPT = "You are a SidSearch planner. Return exactly one valid JSON object and no markdown."
+
+
+def make_prompt(user_input: str, protocol_text: str | None = None) -> str:
+    if protocol_text:
+        return f"SYSTEM: {SYSTEM_PROMPT}\nSIDSEARCH PROTOCOL:\n{protocol_text}\nUSER: {user_input}\nASSISTANT:"
+    return f"SYSTEM: {SYSTEM_PROMPT}\nUSER: {user_input}\nASSISTANT:"
+
+
 def run_rule_engine_benchmark(benchmark_path: Path, output_path: Path, generator: Generator) -> dict[str, object]:
     rows = read_jsonl(benchmark_path)
     records = []
@@ -33,3 +42,46 @@ def run_rule_engine_benchmark(benchmark_path: Path, output_path: Path, generator
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
 
+
+def run_model_benchmark(
+    benchmark_path: Path,
+    output_path: Path,
+    model_id: str = "Qwen/Qwen2.5-0.5B-Instruct",
+    adapter_path: Path | None = None,
+    protocol_path: Path | None = None,
+    max_new_tokens: int = 256,
+) -> dict[str, object]:
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from peft import PeftModel
+    except ImportError as exc:
+        raise RuntimeError(
+            "Model benchmark requires torch, transformers, and peft. "
+            "Install requirements.txt in the active environment first."
+        ) from exc
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True)
+    if adapter_path is not None:
+        if not adapter_path.exists():
+            raise FileNotFoundError(f"Adapter path does not exist: {adapter_path}")
+        model = PeftModel.from_pretrained(model, str(adapter_path))
+    model.eval()
+    protocol_text = protocol_path.read_text(encoding="utf-8") if protocol_path else None
+
+    def generator(text: str) -> str:
+        prompt = make_prompt(text, protocol_text)
+        encoded = tokenizer(prompt, return_tensors="pt")
+        with torch.no_grad():
+            output = model.generate(
+                **encoded,
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+        return tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+
+    return run_rule_engine_benchmark(benchmark_path, output_path, generator)

@@ -30,6 +30,9 @@ def verify_gradient_flow(model: Any, tokenizer: Any, output_path: Path, text: st
         "loss": float(loss.detach().cpu()),
         "lora_parameters_with_nonzero_gradient": lora_nonzero,
         "frozen_parameters_with_gradient": frozen_with_grad,
+        "lora_gradient_nonzero": bool(lora_nonzero),
+        "unexpected_base_trainable_parameters": len(report["unexpected_trainable_parameters"]),
+        "frozen_base_gradients": len(frozen_with_grad),
         "passed": bool(lora_nonzero) and not frozen_with_grad and not report["unexpected_trainable_parameters"],
     }
     write_json(output_path, result)
