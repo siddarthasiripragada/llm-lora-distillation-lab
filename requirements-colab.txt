@@ -1,0 +1,13 @@
+accelerate==1.14.0
+datasets==5.0.0
+matplotlib>=3.8
+pandas==3.0.3
+peft==0.19.1
+pytest>=8.0
+PyYAML>=6.0
+requests==2.34.2
+sentencepiece==0.2.1
+torch
+transformers==5.13.0
+trl==1.8.0
+

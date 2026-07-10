@@ -1,0 +1,24 @@
+generation:
+  temperature: 0
+  do_sample: false
+  max_new_tokens: 256
+  seed: 42
+systems:
+  - id: base_closed_book
+    protocol_in_prompt: false
+  - id: base_open_book
+    protocol_in_prompt: true
+  - id: lora_closed_book
+    adapter: adapters/sidsearch-lora
+    protocol_in_prompt: false
+metrics:
+  composite_weights:
+    intent_accuracy: 0.20
+    source_accuracy: 0.10
+    filter_accuracy: 0.20
+    clarification_accuracy: 0.10
+    applied_rule_f1: 0.15
+    json_validity: 0.10
+    schema_compliance: 0.10
+    rewrite_quality: 0.05
+

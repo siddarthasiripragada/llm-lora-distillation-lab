@@ -1,0 +1,13 @@
+student_model:
+  model_id: Qwen/Qwen2.5-0.5B-Instruct
+  trust_remote_code: true
+  local_training_precision: float32
+  seed: 42
+lora:
+  task_type: CAUSAL_LM
+  rank: 8
+  alpha: 16
+  dropout: 0.05
+  bias: none
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+

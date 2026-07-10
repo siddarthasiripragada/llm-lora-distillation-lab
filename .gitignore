@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Model and training artifacts
+adapters/*
+!adapters/.gitkeep
+results/*
+!results/.gitkeep
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Caches and local secrets
+.env
+.env.*
+hf_cache/
+.cache/
+wandb/
+
