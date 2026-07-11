@@ -46,11 +46,14 @@ def validate_sidsearch_output(value: dict[str, Any], known_rule_ids: set[str] | 
         errors.append(f"missing_keys: {sorted(missing)}")
     if extra:
         errors.append(f"extra_keys: {sorted(extra)}")
-    if value.get("intent") not in INTENTS:
+    intent = value.get("intent")
+    source = value.get("source")
+    confidence = value.get("confidence")
+    if not isinstance(intent, str) or intent not in INTENTS:
         errors.append("invalid_intent")
-    if value.get("source") not in SOURCES:
+    if not isinstance(source, str) or source not in SOURCES:
         errors.append("invalid_source")
-    if value.get("confidence") not in CONFIDENCES:
+    if not isinstance(confidence, str) or confidence not in CONFIDENCES:
         errors.append("invalid_confidence")
     if not isinstance(value.get("entities"), list) or not all(isinstance(item, str) for item in value.get("entities", [])):
         errors.append("invalid_entities")
@@ -96,4 +99,3 @@ def canonical_output(value: dict[str, Any]) -> dict[str, Any]:
         "clarification_question": value["clarification_question"],
         "applied_rules": list(value["applied_rules"]),
     }
-

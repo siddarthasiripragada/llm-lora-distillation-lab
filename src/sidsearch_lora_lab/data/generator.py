@@ -44,15 +44,24 @@ TEMPLATES = {
         "Show recent {source_word}",
     ],
 }
-ENTITIES = ["AtlasSync", "BeaconPlan", "CipherLake", "DeltaIndex", "EchoBudget", "FluxRouter", "GraphMint", "HelioDraft"]
-OWNERS = ["Mira", "Sid", "Avery", "Noor", "Jules"]
+ENTITIES = [
+    "NorthstarCRM",
+    "InvoicePilot",
+    "CloudLedger",
+    "PolicyVault",
+    "SupportPulse",
+    "ReleaseRadar",
+    "ContractHub",
+    "MetricsBridge",
+]
+OWNERS = ["Alex", "Morgan", "Taylor", "Jordan", "Casey"]
 DIFFICULTIES = ["easy", "medium", "hard"]
 FILE_TYPES = ["pdf", "docx", "xlsx", "csv", "pptx", "md", "py", "ipynb", "txt"]
 RELATIVE_TIMES = ["today", "yesterday", "last week", "last month"]
 SOURCE_WORDS = ["documents", "email", "github", "docs"]
 
 
-def build_examples(count: int = 225, seed: int = SEED) -> list[dict[str, Any]]:
+def build_examples(count: int = 325, seed: int = SEED) -> list[dict[str, Any]]:
     rng = random.Random(seed)
     examples: list[dict[str, Any]] = []
     seen_inputs: set[str] = set()

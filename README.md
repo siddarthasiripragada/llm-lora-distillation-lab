@@ -1,131 +1,199 @@
 # SidSearch LoRA Distillation Lab
 
-This repository is a reproducible lab for testing whether a small LoRA-specialized model can outperform its untouched base model on a narrow, private, held-out SidSearch benchmark. It does not claim general model superiority or production readiness.
+A reproducible small-model fine-tuning experiment: freeze a base language model, train only LoRA adapter weights on a private structured task, and measure before/after performance on a held-out benchmark.
 
-## Experiment Question
+The task is intentionally narrow. SidSearch turns natural-language internal search requests into strict JSON execution plans across documents, email, and GitHub. The project is designed to answer one question cleanly:
 
-Can `Qwen/Qwen2.5-0.5B-Instruct`, with frozen base weights and trainable LoRA adapter matrices, learn a private SidSearch query-planning protocol well enough to improve held-out structured-generation performance?
+> Can a 0.5B parameter model learn a private query-planning protocol through sequence-level distillation and supervised LoRA fine-tuning?
 
-## Architecture
+## Result
+
+Evaluation uses the same 50 held-out SidSearch examples for the untouched base model and the LoRA-adapted model.
+
+| System | Protocol In Prompt | Adapter | Composite Score | JSON Validity | Intent Accuracy | Source Accuracy | Entity F1 | Full Record Match |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Base closed-book | No | No | 0.2542 | 0.9600 | 0.0000 | 0.0000 | 0.0600 | 0.0000 |
+| Base open-book | Yes | No | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| LoRA closed-book | No | Yes | 0.3053 | 0.8000 | 0.1600 | 0.2200 | 0.2408 | 0.0000 |
+
+The LoRA-adapted model improved the closed-book composite score from `0.2542` to `0.3053`, an absolute gain of `0.0511` on the held-out benchmark.
+
+The result is modest but real: the adapter improved several task-specific fields while still failing strict schema compliance and exact full-record match. This is evidence of task specialization, not broad model improvement.
+
+## What Was Trained
+
+Base model:
 
 ```text
-SidSearch Protocol
-        |
-        v
-Scenario Generator
-        |
-        v
-Teacher Model through Ollama
-        |
-        v
-Validated Distillation Dataset
-        |
-        v
-Frozen Qwen2.5-0.5B Base Model
-        +
-Trainable LoRA Matrices
-        |
-        v
-Backpropagation Updates Adapter Only
-        |
-        v
-Held-Out Benchmark
-        |
-        v
-Base vs LoRA Evaluation Report
+Qwen/Qwen2.5-0.5B-Instruct
 ```
 
-## What Is Real Training
+LoRA configuration:
 
-The local CPU smoke test loads the student model, injects PEFT LoRA adapters, verifies that only adapter parameters require gradients, runs a backward pass, and saves/reloads adapter artifacts. The full experiment should be run in Colab with a GPU.
+```text
+rank: 8
+alpha: 16
+dropout: 0.05
+target modules: q_proj, k_proj, v_proj, o_proj
+```
 
-## Where Distillation Occurs
+Parameter accounting:
 
-This project uses sequence-level knowledge distillation: a stronger teacher receives the SidSearch protocol and a scenario, then emits a JSON target answer. Validated teacher outputs become supervised examples for the student. This is not logit distillation.
+```text
+total parameters:     495,114,112
+trainable parameters:   1,081,344
+trainable fraction:          0.2184%
+```
 
-## Where Backpropagation Occurs
+Gradient verification:
 
-Backpropagation occurs during supervised LoRA fine-tuning in `src/sidsearch_lora_lab/training/train.py`. Gradients are expected only on LoRA adapter parameters.
+```text
+LoRA gradients non-zero:        true
+unexpected trainable base params: 0
+frozen base gradients:           0
+```
 
-## What Is Frozen
+The original model weights remained frozen. Backpropagation updated only the LoRA adapter matrices.
 
-The base Qwen model weights are frozen by PEFT LoRA setup. `results/trainable_parameters.json` records total parameters, trainable parameters, trainable percentage, and all trainable parameter names.
+## Task
 
-## What LoRA Updates
+SidSearch is a private query-planning protocol. The model receives a natural-language request:
 
-LoRA updates low-rank matrices attached to selected attention projections: `q_proj`, `k_proj`, `v_proj`, and `o_proj`.
+```text
+Search unread email from Morgan about InvoicePilot
+```
 
-## Dataset Design
+It must emit one JSON object:
 
-The SidSearch protocol is defined in `data/protocol.md`. Generated examples include metadata, deterministic expected outputs, categories, difficulty, and human review status. The benchmark is frozen into `benchmarks/heldout.jsonl` before model training.
+```json
+{
+  "intent": "email_search",
+  "entities": ["InvoicePilot"],
+  "source": "email",
+  "filters": {
+    "start_date": null,
+    "end_date": null,
+    "owner": "Morgan",
+    "file_type": null,
+    "status": "unread"
+  },
+  "rewritten_query": "InvoicePilot",
+  "confidence": "high",
+  "clarification_required": false,
+  "clarification_question": null,
+  "applied_rules": ["SS-001", "SS-013", "SS-015", "SS-018", "SS-019", "SS-020"]
+}
+```
 
-## Leakage Prevention
+The protocol defines source routing, relative date handling, explicit date filters, ambiguity handling, file-type inference, status inference, confidence assignment, and schema enforcement.
 
-`scripts/05_freeze_benchmark.py` performs deterministic splitting, duplicate checks, and a conservative text-overlap leakage heuristic before writing train, validation, and held-out files.
+## Experimental Design
 
-## Local Windows Setup
+```text
+SidSearch protocol
+        |
+        v
+Synthetic scenarios
+        |
+        v
+Teacher model via Ollama
+        |
+        v
+Validated sequence-level distillation data
+        |
+        v
+Frozen Qwen2.5-0.5B base model + trainable LoRA adapters
+        |
+        v
+Held-out benchmark
+        |
+        v
+Base vs LoRA comparison
+```
+
+Dataset:
+
+```text
+training examples:   150
+validation examples:  25
+held-out benchmark:   50
+accepted teacher rows: 204
+rejected teacher rows:  71
+```
+
+The benchmark is held out from teacher-data generation and model training. Duplicate and overlap checks run before writing train, validation, and benchmark files.
+
+## Distillation
+
+This project uses sequence-level distillation. A stronger teacher model receives the SidSearch protocol and a scenario, then produces a target JSON sequence. The target is parsed, schema-checked, compared against deterministic rule-engine fields, and either accepted or rejected.
+
+This is not logit distillation. No teacher token probabilities are used.
+
+Teacher runtime:
+
+```text
+Ollama qwen2.5:3b
+temperature: 0
+```
+
+Validation rejects teacher outputs with malformed JSON, wrong schema shape, unsupported rule IDs, or deterministic-field mismatches.
+
+## Metrics
+
+The benchmark scorer records raw generations before parsing. Metrics include:
+
+- JSON validity
+- schema compliance
+- exact intent accuracy
+- exact source accuracy
+- exact confidence accuracy
+- clarification accuracy
+- entity F1
+- applied-rule F1
+- filter-field accuracy
+- exact full-record match
+- composite score
+
+The composite score weights intent, source, filters, clarification, rule F1, JSON validity, schema compliance, and entity extraction.
+
+## Reproduce
+
+Install:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python --version
-python -c "import torch, transformers, peft, datasets, trl; print('imports ok')"
-pip check
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-## CPU Smoke Test
+Validate protocol and data:
 
 ```powershell
 python scripts/01_create_protocol.py
 python scripts/02_generate_seed_scenarios.py
+python scripts/04_validate_distilled_data.py
 python scripts/05_freeze_benchmark.py
-pytest -v
+python -m pytest -v
+```
+
+Verify LoRA mechanics:
+
+```powershell
 python scripts/07_run_cpu_smoke_test.py
 ```
 
-The smoke test is the first local proof of real LoRA backpropagation. It writes `results/trainable_parameters.json` and `results/gradient_verification.json`. The important fields are `trainable_parameters > 0`, `trainable_percentage` well below full fine-tuning, `lora_gradient_nonzero: true`, `unexpected_base_trainable_parameters: 0`, and `frozen_base_gradients: 0`.
-
-## Teacher Data
-
-Start Ollama and pull the practical CPU teacher first:
-
-```powershell
-ollama pull qwen2.5:3b
-Invoke-RestMethod -Uri http://localhost:11434/api/tags
-python scripts/03_generate_teacher_outputs.py
-python scripts/04_validate_distilled_data.py
-python scripts/05_freeze_benchmark.py
-```
-
-`03_generate_teacher_outputs.py` never uses held-out benchmark prompts. `04_validate_distilled_data.py` writes accepted rows to `data/distilled_accepted.jsonl` and rejected rows to `data/rejected_examples.jsonl`. Do not train blindly on raw teacher responses.
-
-## Colab Full Training
-
-Open `notebooks/train_lora_colab.ipynb` and run cells top to bottom:
-
-1. Install pinned dependencies.
-2. Clone the GitHub repository.
-3. Verify GPU availability.
-4. Generate/freeze the dataset.
-5. Load `Qwen/Qwen2.5-0.5B-Instruct`.
-6. Inject LoRA adapters.
-7. Verify frozen/trainable parameters and gradients.
-8. Train for the configured epochs.
-9. Save and zip the best adapter plus metrics.
-10. Download the zip and copy the adapter into `adapters/sidsearch-lora` for local benchmarking.
-
-## Benchmark Methodology
-
-All systems must run against the exact same `benchmarks/heldout.jsonl` file. Raw outputs, parse failures, latency, and metric records are stored in `results/`. Do not edit expected outputs after seeing predictions.
-
-Run the base benchmark before training:
+Run base benchmark:
 
 ```powershell
 python scripts/06_run_base_benchmark.py
 ```
 
-After the Colab adapter is copied into `adapters/sidsearch-lora`, run:
+Train full LoRA adapter on GPU with:
+
+```text
+notebooks/train_lora_colab.ipynb
+```
+
+Run adapter benchmark:
 
 ```powershell
 python scripts/09_run_lora_benchmark.py
@@ -133,33 +201,38 @@ python scripts/10_compare_results.py
 python scripts/11_generate_report.py
 ```
 
-## Actual Results
+## Repository Map
 
-No real base-vs-LoRA benchmark results are committed yet. The deterministic rule-engine benchmark is only a pipeline validation baseline and must not be reported as model performance.
-
-Do not publish training-set performance as evidence of improvement. A valid public claim must come from the 50 held-out SidSearch examples.
-
-## Failure Analysis
-
-Failure analysis is generated after benchmark files exist. Reports must include regressions and parsing/schema failures.
-
-## Limitations
-
-The protocol is synthetic and narrow. Local CPU training is a smoke test only. Full training requires external runtime time, preferably a free Colab GPU. Any public claim must be limited to measured SidSearch benchmark results.
-
-## Reproduction Commands
-
-```powershell
-python scripts/01_create_protocol.py
-python scripts/02_generate_seed_scenarios.py
-python scripts/05_freeze_benchmark.py
-pytest -v
-python scripts/06_run_base_benchmark.py
-python scripts/07_run_cpu_smoke_test.py
-python scripts/10_compare_results.py
-python scripts/11_generate_report.py
+```text
+data/protocol.md                         private SidSearch protocol
+data/train.jsonl                         supervised training split
+data/validation.jsonl                    validation split
+benchmarks/heldout.jsonl                 held-out benchmark
+src/sidsearch_lora_lab/protocol/         parser and deterministic rule engine
+src/sidsearch_lora_lab/distillation/     Ollama teacher client and validation pipeline
+src/sidsearch_lora_lab/training/         formatting, LoRA injection, gradient verification
+src/sidsearch_lora_lab/evaluation/       benchmark runner and metrics
+scripts/                                 executable experiment stages
+notebooks/train_lora_colab.ipynb         GPU training notebook
+results/comparison.json                  final benchmark comparison
+results/report.md                        generated experiment report
+index.html                               readable project page
 ```
 
-## Repository Structure
+## Interpretation
 
-The repository contains configs, source package, protocol/data scripts, benchmark tools, tests, docs, article drafts, Colab notebook, adapter output folder, and result output folder matching the requested lab structure.
+The adapter improved the narrow benchmark composite score, but the model remains far from a production parser. Exact full-record match and schema compliance are still zero in the current run. The experiment demonstrates a real fine-tuning pipeline and measurable task specialization, while also showing that small-model structured generation still needs better formatting constraints, decoding, or post-processing for robust deployment.
+
+## Claim Boundary
+
+Supported claim:
+
+> On 50 held-out SidSearch examples, the LoRA-adapted 0.5B model improved composite task score from `0.2542` to `0.3053` while training only `0.2184%` of parameters.
+
+Unsupported claims:
+
+- The model is generally better.
+- The model is production ready.
+- The adapter improves tasks outside SidSearch.
+- Training-set performance demonstrates generalization.
+

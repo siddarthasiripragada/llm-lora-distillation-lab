@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -16,6 +17,7 @@ results/*
 *.pt
 *.pth
 *.ckpt
+sidsearch_colab_package.zip
 
 # Caches and local secrets
 .env
@@ -23,4 +25,3 @@ results/*
 hf_cache/
 .cache/
 wandb/
-

@@ -12,6 +12,8 @@ def verify_gradient_flow(model: Any, tokenizer: Any, output_path: Path, text: st
 
     model.train()
     encoded = tokenizer(text, return_tensors="pt")
+    device = next(model.parameters()).device
+    encoded = {key: value.to(device) for key, value in encoded.items()}
     labels = encoded["input_ids"].clone()
     output = model(**encoded, labels=labels)
     loss = output.loss

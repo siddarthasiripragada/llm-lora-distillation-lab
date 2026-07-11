@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 from sidsearch_lora_lab.config import Paths, environment_manifest, write_json
@@ -38,18 +39,23 @@ def run_cpu_smoke_test(paths: Paths = Paths(), max_steps: int = 3) -> dict[str, 
 
     dataset = Dataset.from_dict({"text": texts}).map(tokenize, batched=True, remove_columns=["text"])
     output_dir = paths.adapters / "sidsearch-lora-smoke"
-    args = TrainingArguments(
-        output_dir=str(output_dir),
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=2,
-        learning_rate=2e-4,
-        num_train_epochs=1,
-        max_steps=max_steps,
-        logging_steps=1,
-        save_steps=max_steps,
-        report_to=[],
-        no_cuda=True,
-    )
+    training_kwargs = {
+        "output_dir": str(output_dir),
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 2,
+        "learning_rate": 2e-4,
+        "num_train_epochs": 1,
+        "max_steps": max_steps,
+        "logging_steps": 1,
+        "save_steps": max_steps,
+        "report_to": [],
+    }
+    signature = inspect.signature(TrainingArguments.__init__)
+    if "use_cpu" in signature.parameters:
+        training_kwargs["use_cpu"] = True
+    elif "no_cuda" in signature.parameters:
+        training_kwargs["no_cuda"] = True
+    args = TrainingArguments(**training_kwargs)
     trainer = Trainer(model=model, args=args, train_dataset=dataset)
     train_result = trainer.train()
     model.save_pretrained(output_dir)

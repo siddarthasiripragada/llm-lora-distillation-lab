@@ -14,17 +14,28 @@ def main() -> None:
     rows = build_examples()
     splits = deterministic_split(rows)
     accepted_path = Path("data/distilled_accepted.jsonl")
+    heldout_path = Path("benchmarks/heldout.jsonl")
     accepted = read_jsonl(accepted_path) if accepted_path.exists() and accepted_path.stat().st_size > 0 else []
+    if heldout_path.exists() and heldout_path.stat().st_size > 0:
+        splits["heldout"] = read_jsonl(heldout_path)
     if len(accepted) >= 175:
-        splits["train"] = accepted[:150]
-        splits["validation"] = accepted[150:175]
+        heldout_ids = {row["example_id"] for row in splits["heldout"]}
+        heldout_inputs = {row["input"] for row in splits["heldout"]}
+        usable_accepted = [
+            row for row in accepted
+            if row["example_id"] not in heldout_ids and row["input"] not in heldout_inputs
+        ]
+        if len(usable_accepted) < 175:
+            raise SystemExit(
+                f"not enough accepted non-benchmark rows: {len(usable_accepted)} available, 175 required"
+            )
+        splits["train"] = usable_accepted[:150]
+        splits["validation"] = usable_accepted[150:175]
     write_jsonl(Path("data/train.jsonl"), splits["train"])
     write_jsonl(Path("data/validation.jsonl"), splits["validation"])
-    write_jsonl(Path("benchmarks/heldout.jsonl"), splits["heldout"])
+    write_jsonl(heldout_path, splits["heldout"])
     if not accepted_path.exists():
         write_jsonl(accepted_path, [])
-    write_jsonl(Path("data/distilled_raw.jsonl"), [])
-    write_jsonl(Path("data/rejected_examples.jsonl"), [])
     findings = {
         "train": len(splits["train"]),
         "validation": len(splits["validation"]),
