@@ -238,7 +238,7 @@
         </div>
       </div>
       <p class="note good">
-        On 50 held-out SidSearch examples, the LoRA adapter improved composite score by 0.0511 absolute, about 20.1% relative. The result is narrow and task-specific.
+        On 50 held-out SidSearch examples, the LoRA adapter improved composite score by 0.0511 absolute. The paired bootstrap 95% interval is [-0.0146, 0.1207], so this is a directional small-benchmark result, not a settled statistical claim.
       </p>
       <table>
         <thead>
@@ -267,7 +267,7 @@
             <td>0.0000</td>
           </tr>
           <tr>
-            <td>Base open-book</td>
+            <td>Base open-book diagnostic</td>
             <td>Yes</td>
             <td>No</td>
             <td>0.0000</td>
@@ -291,7 +291,10 @@
         </tbody>
       </table>
       <p>
-        The adapter improved task semantics such as intent, source, entity extraction, and clarification handling. It did not solve robust structured output: schema compliance and exact full-record match remain at zero in this run.
+        The adapter improved task semantics such as intent, source, entity extraction, and clarification handling. It did not solve robust structured output: JSON validity dropped from 0.9600 to 0.8000, and schema compliance plus exact full-record match remain at zero in this run.
+      </p>
+      <p class="note">
+        The open-book base row is a diagnostic artifact. In that run, the model often copied or continued the protocol prompt and produced truncated or repeated text instead of one complete JSON object, so it should not be read as a meaningful open-book capability result.
       </p>
     </section>
 
@@ -301,25 +304,25 @@
         SidSearch converts a natural-language search request into one JSON execution plan. The protocol defines exact routing and formatting behavior for documents, email, GitHub, combined search, dates, missing information, and clarification.
       </p>
       <pre><code>Input:
-Search unread email from Morgan about InvoicePilot
+Find open GitHub issues about ReleaseRadar from last month
 
 Expected output:
 {
-  "intent": "email_search",
-  "entities": ["InvoicePilot"],
-  "source": "email",
+  "intent": "repository_search",
+  "entities": ["ReleaseRadar"],
+  "source": "github",
   "filters": {
-    "start_date": null,
-    "end_date": null,
+    "start_date": "2026-06-01",
+    "end_date": "2026-06-30",
     "owner": "Morgan",
     "file_type": null,
-    "status": "unread"
+    "status": "open"
   },
-  "rewritten_query": "InvoicePilot",
+  "rewritten_query": "ReleaseRadar open issues",
   "confidence": "high",
   "clarification_required": false,
   "clarification_question": null,
-  "applied_rules": ["SS-001", "SS-013", "SS-015", "SS-018", "SS-019", "SS-020"]
+  "applied_rules": ["SS-001", "SS-002", "SS-012", "SS-015", "SS-018", "SS-019", "SS-020"]
 }</code></pre>
       <h3>Protocol Coverage</h3>
       <ul class="columns">
@@ -436,6 +439,15 @@ frozen base gradients:            0</code></pre>
       <p>
         The benchmark runner records raw generations before parsing. Metrics include JSON validity, schema compliance, exact intent accuracy, source accuracy, confidence accuracy, clarification accuracy, entity F1, applied-rule F1, filter-field accuracy, exact full-record match, latency, and composite score.
       </p>
+      <pre><code>composite =
+  0.20 * intent_accuracy
++ 0.10 * source_accuracy
++ 0.20 * filter_accuracy
++ 0.10 * clarification_accuracy
++ 0.15 * applied_rule_f1
++ 0.10 * json_validity
++ 0.10 * schema_compliance
++ 0.05 * entity_f1</code></pre>
       <p class="note">
         The composite score improved, but strict schema reliability did not. A stronger next iteration would add constrained decoding, JSON repair, stricter assistant-token masking, more accepted teacher rows, or a schema-specific post-processor.
       </p>
@@ -461,7 +473,8 @@ python scripts/06_run_base_benchmark.py
 
 python scripts/09_run_lora_benchmark.py
 python scripts/10_compare_results.py
-python scripts/11_generate_report.py</code></pre>
+python scripts/11_generate_report.py
+python scripts/12_bootstrap_results.py</code></pre>
       <p>
         Adapter weights and generated result artifacts are intentionally not committed. The README and report record the measured results from the completed run.
       </p>
@@ -470,7 +483,7 @@ python scripts/11_generate_report.py</code></pre>
     <section id="claim">
       <h2>Claim Boundary</h2>
       <p class="note good">
-        Supported claim: on 50 held-out SidSearch examples, the LoRA-adapted 0.5B model improved composite task score from 0.2542 to 0.3053 while training only 0.2184% of parameters.
+        Supported claim: on 50 held-out SidSearch examples, the LoRA-adapted 0.5B model directionally improved composite task score from 0.2542 to 0.3053 while training only 0.2184% of parameters. The strict-output failures remain unresolved and are part of the result.
       </p>
       <ul>
         <li>No claim of general model improvement.</li>

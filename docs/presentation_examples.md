@@ -33,7 +33,6 @@ The fictional sources are:
 The fictional project/entity names are:
 
 - NorthstarCRM
-- InvoicePilot
 - CloudLedger
 - PolicyVault
 - SupportPulse
@@ -85,7 +84,7 @@ Interview explanation:
 Input:
 
 ```text
-Search unread email from Morgan about InvoicePilot
+Search unread email from Morgan about CloudLedger
 ```
 
 Expected model behavior:
@@ -93,7 +92,7 @@ Expected model behavior:
 ```json
 {
   "intent": "email_search",
-  "entities": ["InvoicePilot"],
+  "entities": ["CloudLedger"],
   "source": "email",
   "filters": {
     "start_date": null,
@@ -241,7 +240,7 @@ Interview explanation:
 Use this one:
 
 ```text
-Search unread email from Morgan about InvoicePilot
+Find open GitHub issues about ReleaseRadar from last month
 ```
 
 Why it is good:
@@ -249,8 +248,8 @@ Why it is good:
 - clearly fictional
 - easy to understand
 - demonstrates entity extraction
-- demonstrates email routing
-- demonstrates owner extraction
+- demonstrates GitHub/repository routing
+- demonstrates relative date resolution
 - demonstrates status filtering
 - produces objective JSON
 
@@ -263,4 +262,3 @@ benchmarks/heldout.jsonl
 ```
 
 Do not claim improvement from hand-picked examples. Use them only to explain the task.
-

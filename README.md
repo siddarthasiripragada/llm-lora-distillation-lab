@@ -32,7 +32,7 @@ The final evaluation uses the same 50 held-out SidSearch examples for the untouc
 | System | Protocol In Prompt | Adapter | Composite Score | JSON Validity | Intent Accuracy | Source Accuracy | Entity F1 | Full Record Match |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Base closed-book | No | No | 0.2542 | 0.9600 | 0.0000 | 0.0000 | 0.0600 | 0.0000 |
-| Base open-book | Yes | No | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| Base open-book diagnostic | Yes | No | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
 | LoRA closed-book | No | Yes | 0.3053 | 0.8000 | 0.1600 | 0.2200 | 0.2408 | 0.0000 |
 
 Summary:
@@ -43,9 +43,17 @@ LoRA closed-book composite: 0.3053
 absolute gain:              0.0511
 relative gain:              ~20.1%
 held-out examples:          50
+paired bootstrap 95% CI:    [-0.0146, 0.1207]
 ```
 
-The LoRA-adapted model improved the narrow task composite score. The result is not a broad model-quality claim. Exact full-record match and schema compliance remain weak, which is part of the finding.
+The LoRA-adapted model improved the narrow task composite score and several semantic partial-credit metrics, but the failure modes matter:
+
+- JSON validity dropped from `0.9600` to `0.8000`.
+- Exact full-record match stayed at `0.0000`.
+- Schema compliance stayed at `0.0000`.
+- The paired bootstrap interval on the composite-score delta crosses zero, so this is a directional result on a small benchmark, not a statistically settled claim.
+
+The open-book base row is kept as a diagnostic artifact, not as a headline comparison. In that run, the base model often copied or continued the protocol prompt and produced truncated or repeated text rather than one complete JSON object. That explains the `0.0000` JSON-validity score and points to prompt/generation design, not to a credible claim that protocol context makes the base model categorically worse.
 
 ## What This Demonstrates
 
@@ -69,28 +77,28 @@ SidSearch converts a user search request into one JSON execution plan.
 Example input:
 
 ```text
-Search unread email from Morgan about InvoicePilot
+Find open GitHub issues about ReleaseRadar from last month
 ```
 
 Expected output:
 
 ```json
 {
-  "intent": "email_search",
-  "entities": ["InvoicePilot"],
-  "source": "email",
+  "intent": "repository_search",
+  "entities": ["ReleaseRadar"],
+  "source": "github",
   "filters": {
-    "start_date": null,
-    "end_date": null,
+    "start_date": "2026-06-01",
+    "end_date": "2026-06-30",
     "owner": "Morgan",
     "file_type": null,
-    "status": "unread"
+    "status": "open"
   },
-  "rewritten_query": "InvoicePilot",
+  "rewritten_query": "ReleaseRadar open issues",
   "confidence": "high",
   "clarification_required": false,
   "clarification_question": null,
-  "applied_rules": ["SS-001", "SS-013", "SS-015", "SS-018", "SS-019", "SS-020"]
+  "applied_rules": ["SS-001", "SS-002", "SS-012", "SS-015", "SS-018", "SS-019", "SS-020"]
 }
 ```
 
@@ -282,12 +290,25 @@ The benchmark runner stores raw model output before parsing. Metrics include:
 
 The composite score combines several task-specific metrics. It is useful as a single summary number, but the component metrics are more informative.
 
+```text
+composite =
+  0.20 * intent_accuracy
++ 0.10 * source_accuracy
++ 0.20 * filter_accuracy
++ 0.10 * clarification_accuracy
++ 0.15 * applied_rule_f1
++ 0.10 * json_validity
++ 0.10 * schema_compliance
++ 0.05 * entity_f1
+```
+
 Result interpretation:
 
 - LoRA improved composite score, intent accuracy, source accuracy, entity F1, and clarification accuracy.
 - LoRA reduced JSON validity compared with the base closed-book run.
 - Exact full-record match stayed at zero.
 - Schema compliance stayed at zero.
+- The bootstrap CI on the composite delta is wide on `n=50`, so the result should be treated as a small-benchmark signal.
 
 That mixture is important: fine-tuning improved some semantic task behavior, but did not solve robust structured output.
 
@@ -411,7 +432,7 @@ It also exposed the hard part of structured generation. The adapter learned some
 
 Supported claim:
 
-> On 50 held-out SidSearch examples, the LoRA-adapted 0.5B model improved composite task score from `0.2542` to `0.3053` while training only `0.2184%` of parameters.
+> On 50 held-out SidSearch examples, the LoRA-adapted 0.5B model directionally improved composite task score from `0.2542` to `0.3053` while training only `0.2184%` of parameters. JSON validity regressed from `0.9600` to `0.8000`, exact full-record match remained `0.0000`, and the paired bootstrap interval on the composite delta was `[-0.0146, 0.1207]`.
 
 Unsupported claims:
 

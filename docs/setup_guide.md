@@ -4,7 +4,7 @@ This guide walks through the full experiment from an empty machine to a before/a
 
 The goal is to reproduce this claim:
 
-> On 50 held-out SidSearch examples, the base model scored `0.2542` composite. The same model with a LoRA adapter scored `0.3053` composite while training only `0.2184%` of parameters.
+> On 50 held-out SidSearch examples, the base model scored `0.2542` composite. The same model with a LoRA adapter scored `0.3053` composite while training only `0.2184%` of parameters. The paired bootstrap 95% interval on the composite delta was `[-0.0146, 0.1207]`, so treat this as a directional small-benchmark signal.
 
 ## 0. What You Are Building
 
@@ -198,8 +198,10 @@ Completed run:
 
 ```text
 base_closed_book composite_score: 0.2542
-base_open_book composite_score: 0.0
+base_open_book diagnostic composite_score: 0.0
 ```
+
+The open-book row is a diagnostic run. In the completed experiment, the model often continued the protocol prompt or emitted truncated JSON-like text, so the zero score indicates prompt/generation failure rather than a credible capability comparison.
 
 ## 8. Full LoRA Training In Google Colab
 
@@ -287,6 +289,7 @@ lora_closed_book composite_score: 0.3053
 ```powershell
 python scripts/10_compare_results.py
 python scripts/11_generate_report.py
+python scripts/12_bootstrap_results.py
 ```
 
 Outputs:
@@ -302,13 +305,14 @@ Final measured result:
 base closed-book composite: 0.2542
 LoRA closed-book composite: 0.3053
 absolute gain: 0.0511
+paired bootstrap 95% CI: [-0.0146, 0.1207]
 ```
 
 ## 12. What To Claim
 
 Correct:
 
-> On 50 held-out SidSearch examples, the LoRA-adapted 0.5B model improved composite score from `0.2542` to `0.3053` while training only `0.2184%` of parameters.
+> On 50 held-out SidSearch examples, the LoRA-adapted 0.5B model directionally improved composite score from `0.2542` to `0.3053` while training only `0.2184%` of parameters. JSON validity regressed from `0.9600` to `0.8000`, and exact full-record match remained `0.0000`.
 
 Incorrect:
 
@@ -316,4 +320,3 @@ Incorrect:
 - The model is production ready.
 - The model is better than GPT.
 - Training-set performance proves generalization.
-

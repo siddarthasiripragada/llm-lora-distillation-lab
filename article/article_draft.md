@@ -32,6 +32,7 @@ Result:
 base closed-book composite: 0.2542
 LoRA closed-book composite: 0.3053
 absolute gain:              0.0511
+paired bootstrap 95% CI:    [-0.0146, 0.1207]
 ```
 
-The result is useful but limited. The LoRA model improved task-specific fields such as intent, source, entity extraction, and clarification handling. It did not achieve exact full-record match, and schema compliance remained weak. This is evidence of narrow task specialization, not broad model improvement.
+The result is useful but limited. The LoRA model improved task-specific fields such as intent, source, entity extraction, and clarification handling, but JSON validity fell from 0.9600 to 0.8000. It did not achieve exact full-record match, and schema compliance remained weak. This is evidence of narrow task movement, not production-ready structured parsing.
