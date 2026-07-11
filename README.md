@@ -20,6 +20,7 @@ This repository is built as an end-to-end research artifact: protocol design, sy
 - [Distillation Method](#distillation-method)
 - [LoRA Training Evidence](#lora-training-evidence)
 - [Evaluation Metrics](#evaluation-metrics)
+- [Learning Page](#learning-page)
 - [Reproduction Guide](#reproduction-guide)
 - [Repository Structure](#repository-structure)
 - [Interpretation](#interpretation)
@@ -322,6 +323,20 @@ For a full step-by-step walkthrough, including local setup, Ollama teacher gener
 docs/setup_guide.md
 ```
 
+## Learning Page
+
+For a beginner-friendly explanation of LoRA, frozen weights, sequence-level distillation, held-out benchmarking, and how to read this experiment, open the GitHub Pages learning guide:
+
+```text
+release.html
+```
+
+Live page:
+
+```text
+https://siddarthasiripragada.github.io/llm-lora-distillation-lab/release.html
+```
+
 ### 1. Install
 
 ```powershell
@@ -412,6 +427,7 @@ docs/interview_prep.md                    explanation and interview notes
 docs/presentation_examples.md             clean fictional examples for demos
 docs/setup_guide.md                       full local + Colab reproduction guide
 index.html                                readable static project page
+release.html                              one-page LoRA and experiment learning guide
 ```
 
 ## Interpretation
