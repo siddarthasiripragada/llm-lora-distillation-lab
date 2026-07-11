@@ -409,7 +409,6 @@ notebooks/train_lora_colab.ipynb          GPU training notebook
 docs/interview_prep.md                    explanation and interview notes
 docs/presentation_examples.md             clean fictional examples for demos
 docs/setup_guide.md                       full local + Colab reproduction guide
-article/                                  article and social post drafts
 index.html                                readable static project page
 ```
 
