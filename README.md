@@ -44,6 +44,8 @@ absolute gain:              0.0511
 relative gain:              ~20.1%
 held-out examples:          50
 paired bootstrap 95% CI:    [-0.0146, 0.1207]
+JSON validity change:       0.9600 -> 0.8000
+full-record match:          0.0000 -> 0.0000
 ```
 
 The LoRA-adapted model improved the narrow task composite score and several semantic partial-credit metrics, but the failure modes matter:
@@ -53,7 +55,7 @@ The LoRA-adapted model improved the narrow task composite score and several sema
 - Schema compliance stayed at `0.0000`.
 - The paired bootstrap interval on the composite-score delta crosses zero, so this is a directional result on a small benchmark, not a statistically settled claim.
 
-The open-book base row is kept as a diagnostic artifact, not as a headline comparison. In that run, the base model often copied or continued the protocol prompt and produced truncated or repeated text rather than one complete JSON object. That explains the `0.0000` JSON-validity score and points to prompt/generation design, not to a credible claim that protocol context makes the base model categorically worse.
+The open-book base row is kept as a diagnostic artifact, not as a headline comparison. In that run, the base model often copied or continued the protocol prompt and produced truncated or repeated text rather than one complete JSON object. That explains the `0.0000` JSON-validity score and points to prompt/generation design, not to a credible claim that protocol context makes the base model categorically worse. Raw generations are written to `results/base_open_book_results.json` when `scripts/06_run_base_benchmark.py` is run.
 
 ## What This Demonstrates
 

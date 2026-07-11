@@ -240,6 +240,12 @@
       <p class="note good">
         On 50 held-out SidSearch examples, the LoRA adapter improved composite score by 0.0511 absolute. The paired bootstrap 95% interval is [-0.0146, 0.1207], so this is a directional small-benchmark result, not a settled statistical claim.
       </p>
+      <pre><code>base closed-book composite: 0.2542
+LoRA closed-book composite: 0.3053
+absolute gain:              0.0511
+paired bootstrap 95% CI:    [-0.0146, 0.1207]
+JSON validity change:       0.9600 -> 0.8000
+full-record match:          0.0000 -> 0.0000</code></pre>
       <table>
         <thead>
           <tr>
@@ -294,7 +300,7 @@
         The adapter improved task semantics such as intent, source, entity extraction, and clarification handling. It did not solve robust structured output: JSON validity dropped from 0.9600 to 0.8000, and schema compliance plus exact full-record match remain at zero in this run.
       </p>
       <p class="note">
-        The open-book base row is a diagnostic artifact. In that run, the model often copied or continued the protocol prompt and produced truncated or repeated text instead of one complete JSON object, so it should not be read as a meaningful open-book capability result.
+        The open-book base row is a diagnostic artifact. In that run, the model often copied or continued the protocol prompt and produced truncated or repeated text instead of one complete JSON object, so it should not be read as a meaningful open-book capability result. Raw generations are written to results/base_open_book_results.json when the base benchmark script is run.
       </p>
     </section>
 
