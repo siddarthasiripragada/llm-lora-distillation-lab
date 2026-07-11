@@ -3,68 +3,96 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A reproducible LoRA fine-tuning and sequence-level distillation experiment for a small language model on a held-out structured-generation benchmark.">
   <title>SidSearch LoRA Distillation Lab</title>
   <style>
     :root {
       color-scheme: light;
-      --ink: #171717;
-      --muted: #5f646d;
-      --line: #d9dde5;
-      --paper: #fbfbf8;
+      --ink: #151515;
+      --muted: #5d6470;
+      --line: #d8dde6;
+      --paper: #fbfaf6;
       --panel: #ffffff;
+      --soft: #f4f6f8;
       --accent: #0f766e;
-      --accent-2: #b45309;
-      --code: #f3f4f6;
+      --accent-dark: #0b4f49;
+      --warn: #a16207;
+      --good: #166534;
+      --bad: #991b1b;
+      --code: #f0f2f5;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--ink);
       background: var(--paper);
-      line-height: 1.55;
+      line-height: 1.58;
     }
+    a { color: var(--accent-dark); }
     main {
-      max-width: 1120px;
+      max-width: 1160px;
       margin: 0 auto;
-      padding: 48px 22px 72px;
+      padding: 44px 22px 76px;
     }
     header {
       border-bottom: 1px solid var(--line);
       padding-bottom: 28px;
-      margin-bottom: 34px;
+      margin-bottom: 28px;
     }
     .eyebrow {
       color: var(--accent);
-      font-weight: 700;
-      letter-spacing: .04em;
+      font-weight: 800;
+      letter-spacing: .045em;
       text-transform: uppercase;
       font-size: 13px;
     }
     h1 {
-      font-size: clamp(34px, 6vw, 68px);
+      font-size: clamp(36px, 6vw, 72px);
       line-height: 1.02;
+      letter-spacing: -0.01em;
       margin: 10px 0 18px;
-      max-width: 900px;
+      max-width: 980px;
     }
     h2 {
-      font-size: 24px;
-      margin: 42px 0 14px;
+      font-size: 26px;
+      margin: 46px 0 14px;
       padding-bottom: 8px;
       border-bottom: 1px solid var(--line);
     }
-    h3 { margin: 22px 0 8px; }
-    p { max-width: 850px; }
+    h3 {
+      font-size: 18px;
+      margin: 24px 0 8px;
+    }
+    p { max-width: 900px; }
     .lede {
       color: var(--muted);
       font-size: 20px;
-      max-width: 890px;
+      max-width: 930px;
+    }
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 20px 0 0;
+    }
+    .nav a {
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 14px;
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
       margin: 24px 0;
+    }
+    .two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .metric {
       background: var(--panel);
@@ -79,8 +107,13 @@
       margin-bottom: 6px;
     }
     .metric strong {
-      font-size: 28px;
+      font-size: 30px;
       line-height: 1.1;
+    }
+    .metric small {
+      display: block;
+      color: var(--muted);
+      margin-top: 8px;
     }
     table {
       width: 100%;
@@ -111,12 +144,16 @@
       padding: 2px 5px;
       border-radius: 4px;
     }
-    pre code { padding: 0; }
+    pre code { padding: 0; background: transparent; }
     .note {
-      border-left: 4px solid var(--accent-2);
+      border-left: 4px solid var(--warn);
       padding: 12px 16px;
       background: #fff7ed;
-      max-width: 880px;
+      max-width: 900px;
+    }
+    .good {
+      border-left-color: var(--good);
+      background: #f0fdf4;
     }
     .flow {
       display: grid;
@@ -129,7 +166,7 @@
       background: var(--panel);
       border-radius: 8px;
       padding: 12px;
-      min-height: 88px;
+      min-height: 96px;
       font-size: 14px;
     }
     .step b {
@@ -137,16 +174,24 @@
       color: var(--accent);
       margin-bottom: 6px;
     }
-    ul { max-width: 850px; }
+    .columns {
+      columns: 2;
+      column-gap: 36px;
+      max-width: 930px;
+    }
+    li { break-inside: avoid; }
+    ul { max-width: 900px; }
     footer {
-      margin-top: 56px;
+      margin-top: 58px;
       color: var(--muted);
       border-top: 1px solid var(--line);
       padding-top: 18px;
       font-size: 14px;
     }
-    @media (max-width: 760px) {
-      .grid, .flow { grid-template-columns: 1fr; }
+    @media (max-width: 820px) {
+      main { padding-top: 30px; }
+      .grid, .grid.two, .flow { grid-template-columns: 1fr; }
+      .columns { columns: 1; }
       table { font-size: 13px; }
       th, td { padding: 9px 7px; }
     }
@@ -158,35 +203,62 @@
       <div class="eyebrow">LoRA fine-tuning · sequence-level distillation · held-out evaluation</div>
       <h1>Teaching a 0.5B model a private search protocol</h1>
       <p class="lede">
-        SidSearch is a small, reproducible experiment that fine-tunes only LoRA adapter weights while keeping the base model frozen. The benchmark asks whether the adapted model improves on an unseen structured-generation task.
+        SidSearch is a reproducible fine-tuning experiment that freezes a small base language model, trains only LoRA adapter weights on a private structured task, and measures before/after performance on the same held-out benchmark.
       </p>
+      <nav class="nav" aria-label="Page sections">
+        <a href="#result">Result</a>
+        <a href="#task">Task</a>
+        <a href="#design">Design</a>
+        <a href="#data">Data</a>
+        <a href="#distillation">Distillation</a>
+        <a href="#training">Training Evidence</a>
+        <a href="#metrics">Metrics</a>
+        <a href="#reproduce">Reproduce</a>
+        <a href="#claim">Claim Boundary</a>
+      </nav>
     </header>
 
-    <section>
-      <h2>Result</h2>
+    <section id="result">
+      <h2>Headline Result</h2>
       <div class="grid">
-        <div class="metric"><span>Base closed-book composite</span><strong>0.2542</strong></div>
-        <div class="metric"><span>LoRA closed-book composite</span><strong>0.3053</strong></div>
-        <div class="metric"><span>Trainable parameter fraction</span><strong>0.2184%</strong></div>
+        <div class="metric">
+          <span>Base closed-book composite</span>
+          <strong>0.2542</strong>
+          <small>Untouched Qwen2.5-0.5B-Instruct</small>
+        </div>
+        <div class="metric">
+          <span>LoRA closed-book composite</span>
+          <strong>0.3053</strong>
+          <small>Same base model plus trained adapter</small>
+        </div>
+        <div class="metric">
+          <span>Trainable parameter fraction</span>
+          <strong>0.2184%</strong>
+          <small>1,081,344 trainable parameters</small>
+        </div>
       </div>
-      <p>
-        The LoRA adapter improved the held-out composite score by <strong>0.0511 absolute</strong>. The result is intentionally reported with its limitations: exact full-record match and schema compliance remain at zero in this run.
+      <p class="note good">
+        On 50 held-out SidSearch examples, the LoRA adapter improved composite score by 0.0511 absolute, about 20.1% relative. The result is narrow and task-specific.
       </p>
       <table>
         <thead>
           <tr>
             <th>System</th>
+            <th>Protocol In Prompt</th>
+            <th>Adapter</th>
             <th>Composite</th>
             <th>JSON Validity</th>
             <th>Intent</th>
             <th>Source</th>
             <th>Entity F1</th>
-            <th>Exact Match</th>
+            <th>Full Match</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>Base closed-book</td>
+            <td>No</td>
+            <td>No</td>
             <td>0.2542</td>
             <td>0.9600</td>
             <td>0.0000</td>
@@ -196,6 +268,8 @@
           </tr>
           <tr>
             <td>Base open-book</td>
+            <td>Yes</td>
+            <td>No</td>
             <td>0.0000</td>
             <td>0.0000</td>
             <td>0.0000</td>
@@ -205,6 +279,8 @@
           </tr>
           <tr>
             <td>LoRA closed-book</td>
+            <td>No</td>
+            <td>Yes</td>
             <td>0.3053</td>
             <td>0.8000</td>
             <td>0.1600</td>
@@ -214,17 +290,20 @@
           </tr>
         </tbody>
       </table>
+      <p>
+        The adapter improved task semantics such as intent, source, entity extraction, and clarification handling. It did not solve robust structured output: schema compliance and exact full-record match remain at zero in this run.
+      </p>
     </section>
 
-    <section>
-      <h2>Task</h2>
+    <section id="task">
+      <h2>Task Definition</h2>
       <p>
-        SidSearch converts an internal search request into a strict JSON execution plan. It tests whether a model can learn a private schema, source-routing rules, date rules, ambiguity handling, and filter extraction.
+        SidSearch converts a natural-language search request into one JSON execution plan. The protocol defines exact routing and formatting behavior for documents, email, GitHub, combined search, dates, missing information, and clarification.
       </p>
       <pre><code>Input:
 Search unread email from Morgan about InvoicePilot
 
-Output:
+Expected output:
 {
   "intent": "email_search",
   "entities": ["InvoicePilot"],
@@ -236,78 +315,169 @@ Output:
     "file_type": null,
     "status": "unread"
   },
+  "rewritten_query": "InvoicePilot",
   "confidence": "high",
-  "clarification_required": false
+  "clarification_required": false,
+  "clarification_question": null,
+  "applied_rules": ["SS-001", "SS-013", "SS-015", "SS-018", "SS-019", "SS-020"]
 }</code></pre>
+      <h3>Protocol Coverage</h3>
+      <ul class="columns">
+        <li>exact entity preservation</li>
+        <li>relative date resolution</li>
+        <li>explicit date filters</li>
+        <li>source routing</li>
+        <li>ambiguous source handling</li>
+        <li>missing entity handling</li>
+        <li>query expansion</li>
+        <li>quoted phrase preservation</li>
+        <li>freshness handling</li>
+        <li>negation and exclusion filters</li>
+        <li>repository, email, document, and multi-source routing</li>
+        <li>confidence assignment</li>
+        <li>clarification policy</li>
+        <li>file-type and status inference</li>
+        <li>output schema enforcement</li>
+      </ul>
     </section>
 
-    <section>
-      <h2>Method</h2>
+    <section id="design">
+      <h2>System Design</h2>
       <div class="flow">
-        <div class="step"><b>1. Protocol</b>Define SidSearch rules and schema.</div>
-        <div class="step"><b>2. Scenarios</b>Generate private task examples.</div>
-        <div class="step"><b>3. Teacher</b>Use Ollama qwen2.5:3b for sequence labels.</div>
-        <div class="step"><b>4. Validate</b>Reject malformed or rule-breaking outputs.</div>
-        <div class="step"><b>5. Train</b>Freeze base model, update LoRA only.</div>
-        <div class="step"><b>6. Benchmark</b>Compare on 50 held-out examples.</div>
+        <div class="step"><b>1. Protocol</b>Define the private SidSearch behavior and schema.</div>
+        <div class="step"><b>2. Scenarios</b>Generate structured task examples across rule categories.</div>
+        <div class="step"><b>3. Teacher</b>Use Ollama qwen2.5:3b for sequence-level labels.</div>
+        <div class="step"><b>4. Validate</b>Reject malformed JSON, invalid schema, and rule mismatches.</div>
+        <div class="step"><b>5. Train</b>Freeze the base model and update LoRA adapters only.</div>
+        <div class="step"><b>6. Benchmark</b>Compare base vs adapter on 50 held-out examples.</div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Protocol</td><td>Defines the target behavior before training.</td></tr>
+          <tr><td>Data pipeline</td><td>Creates, validates, and splits examples.</td></tr>
+          <tr><td>Training pipeline</td><td>Injects LoRA, freezes base weights, verifies gradients, trains adapters.</td></tr>
+          <tr><td>Evaluation pipeline</td><td>Preserves raw outputs, parses JSON, computes metrics, reports failures.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="data">
+      <h2>Dataset</h2>
+      <div class="grid">
+        <div class="metric"><span>Training examples</span><strong>150</strong></div>
+        <div class="metric"><span>Validation examples</span><strong>25</strong></div>
+        <div class="metric"><span>Held-out benchmark</span><strong>50</strong></div>
+      </div>
+      <div class="grid two">
+        <div class="metric"><span>Accepted teacher rows</span><strong>204</strong></div>
+        <div class="metric"><span>Rejected teacher rows</span><strong>71</strong></div>
       </div>
       <p>
-        The training data comes from validated sequence-level distillation. The teacher produces full JSON target sequences; the student is trained with supervised fine-tuning. This is not logit distillation.
+        The held-out benchmark is not used for teacher-data generation or adapter training. Duplicate and overlap checks run before final train, validation, and benchmark files are written.
+      </p>
+      <pre><code>data/seed_scenarios.jsonl
+data/distilled_raw.jsonl
+data/distilled_accepted.jsonl
+data/rejected_examples.jsonl
+data/train.jsonl
+data/validation.jsonl
+benchmarks/heldout.jsonl</code></pre>
+    </section>
+
+    <section id="distillation">
+      <h2>Distillation Method</h2>
+      <p>
+        This project uses sequence-level distillation. The teacher receives the SidSearch protocol and one scenario, then emits a complete JSON target answer. The student is trained with supervised fine-tuning on accepted target sequences.
+      </p>
+      <pre><code>teacher provider: Ollama
+teacher model:    qwen2.5:3b
+temperature:      0
+method:           sequence-level distillation</code></pre>
+      <p>
+        This is not logit distillation. No teacher token probabilities, logits, or hidden states are transferred.
       </p>
     </section>
 
-    <section>
-      <h2>Training Evidence</h2>
-      <pre><code>total parameters:     495,114,112
+    <section id="training">
+      <h2>LoRA Training Evidence</h2>
+      <pre><code>base model:          Qwen/Qwen2.5-0.5B-Instruct
+rank:                8
+alpha:               16
+dropout:             0.05
+target modules:      q_proj, k_proj, v_proj, o_proj
+
+total parameters:     495,114,112
 trainable parameters:   1,081,344
 trainable fraction:          0.2184%
 
 LoRA gradients non-zero:          true
 unexpected trainable base params: 0
 frozen base gradients:            0</code></pre>
+      <table>
+        <thead>
+          <tr><th>Epoch</th><th>Training Loss</th><th>Validation Loss</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>2.039536</td><td>1.175299</td></tr>
+          <tr><td>2</td><td>0.686261</td><td>0.495133</td></tr>
+          <tr><td>3</td><td>0.327262</td><td>0.299387</td></tr>
+        </tbody>
+      </table>
       <p>
-        LoRA was attached to attention projection modules: <code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>, and <code>o_proj</code>.
+        The validation loss decreased during GPU training, while the held-out benchmark provides the real before/after test.
       </p>
     </section>
 
-    <section>
-      <h2>Data</h2>
-      <pre><code>training examples:     150
-validation examples:    25
-held-out benchmark:     50
-accepted teacher rows: 204
-rejected teacher rows:  71</code></pre>
+    <section id="metrics">
+      <h2>Evaluation Metrics</h2>
       <p>
-        The held-out benchmark is not used for training. The split process checks duplicates and suspicious train-benchmark overlap.
+        The benchmark runner records raw generations before parsing. Metrics include JSON validity, schema compliance, exact intent accuracy, source accuracy, confidence accuracy, clarification accuracy, entity F1, applied-rule F1, filter-field accuracy, exact full-record match, latency, and composite score.
+      </p>
+      <p class="note">
+        The composite score improved, but strict schema reliability did not. A stronger next iteration would add constrained decoding, JSON repair, stricter assistant-token masking, more accepted teacher rows, or a schema-specific post-processor.
       </p>
     </section>
 
-    <section>
-      <h2>Reproduce</h2>
+    <section id="reproduce">
+      <h2>Reproduction Guide</h2>
       <pre><code>python -m pip install -r requirements.txt
 python -m pip install -e .
 python scripts/01_create_protocol.py
+python -m pytest -v
+
+ollama pull qwen2.5:3b
+python scripts/03_generate_teacher_outputs.py
+python scripts/04_validate_distilled_data.py
 python scripts/05_freeze_benchmark.py
-python scripts/06_run_base_benchmark.py
+
 python scripts/07_run_cpu_smoke_test.py
+python scripts/06_run_base_benchmark.py
+
+# GPU training:
+# notebooks/train_lora_colab.ipynb
+
 python scripts/09_run_lora_benchmark.py
 python scripts/10_compare_results.py
 python scripts/11_generate_report.py</code></pre>
       <p>
-        Full adapter training is performed with <code>notebooks/train_lora_colab.ipynb</code> on a GPU runtime.
+        Adapter weights and generated result artifacts are intentionally not committed. The README and report record the measured results from the completed run.
       </p>
     </section>
 
-    <section>
+    <section id="claim">
       <h2>Claim Boundary</h2>
-      <p class="note">
+      <p class="note good">
         Supported claim: on 50 held-out SidSearch examples, the LoRA-adapted 0.5B model improved composite task score from 0.2542 to 0.3053 while training only 0.2184% of parameters.
       </p>
       <ul>
         <li>No claim of general model improvement.</li>
+        <li>No claim that the model is better than larger general-purpose models.</li>
         <li>No claim of production readiness.</li>
+        <li>No claim that the adapter improves tasks outside SidSearch.</li>
         <li>No claim that training-set performance demonstrates generalization.</li>
-        <li>No claim outside the SidSearch benchmark.</li>
       </ul>
     </section>
 
