@@ -293,6 +293,12 @@ That mixture is important: fine-tuning improved some semantic task behavior, but
 
 ## Reproduction Guide
 
+For a full step-by-step walkthrough, including local setup, Ollama teacher generation, Google Colab training, adapter download, and final benchmarking, see:
+
+```text
+docs/setup_guide.md
+```
+
 ### 1. Install
 
 ```powershell
@@ -381,6 +387,7 @@ scripts/                                  executable experiment stages
 notebooks/train_lora_colab.ipynb          GPU training notebook
 docs/interview_prep.md                    explanation and interview notes
 docs/presentation_examples.md             clean fictional examples for demos
+docs/setup_guide.md                       full local + Colab reproduction guide
 article/                                  article and social post drafts
 index.html                                readable static project page
 ```
@@ -413,4 +420,3 @@ Unsupported claims:
 - The model is production ready.
 - The adapter improves tasks outside SidSearch.
 - Training-set performance demonstrates generalization.
-
